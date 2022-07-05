@@ -1,7 +1,9 @@
+use std::cell::{RefCell, RefMut};
 use std::io::{Read, Seek};
+use std::rc::Rc;
 
 pub struct SampleInfo<R> {
-    reader: R,
+    reader: Rc<RefCell<R>>,
     format: u8,
     channels: u8,
     sample_rate: u16,
@@ -21,7 +23,8 @@ impl<R> SampleInfo<R>
 where
     R: Seek + Read,
 {
-    pub fn new(mut reader: R) -> Self {
+    pub fn new(reader_rc: Rc<RefCell<R>>) -> Self {
+        let mut reader = reader_rc.borrow_mut();
         let format = read_to_u8(&mut reader);
         let channels = read_to_u8(&mut reader);
         let sample_rate = read_to_u16(&mut reader);
@@ -33,9 +36,10 @@ where
         let loop_start = read_to_u32(&mut reader);
         let loop_end = read_to_u32(&mut reader);
         let loop_count = read_to_i16(&mut reader);
-        
+        drop(reader);
+
         Self {
-            reader,
+            reader: reader_rc,
             format,
             channels,
             sample_rate,
@@ -50,9 +54,9 @@ where
         }
     }
 
-    pub fn reset(reader: R) -> Self {
+    pub fn reset(self) -> Self {
         Self {
-            reader,
+            reader: self.reader,
             format: u8::max_value(),
             channels: 0,
             sample_rate: 0,
@@ -68,7 +72,7 @@ where
     }
 
     pub fn read(self) -> Self {
-        let mut reader = self.reader;
+        let mut reader = self.reader.borrow_mut();
         let format = read_to_u8(&mut reader);
         let channels = read_to_u8(&mut reader);
         let sample_rate = read_to_u16(&mut reader);
@@ -80,9 +84,10 @@ where
         let loop_start = read_to_u32(&mut reader);
         let loop_end = read_to_u32(&mut reader);
         let loop_count = read_to_i16(&mut reader);
-        
+        drop(reader);
+
         Self {
-            reader,
+            reader: self.reader,
             format,
             channels,
             sample_rate,
@@ -96,46 +101,47 @@ where
             loop_count,
         }
     }
-
-    pub fn into_inner(self) -> R {
-        self.reader
-    }
 }
 
-fn read_to_u8<R>(reader: &mut R) -> u8
-where R: Read + Seek 
+fn read_to_u8<R>(reader: &mut RefMut<R>) -> u8
+where
+    R: Read + Seek,
 {
     let mut buf = [0u8; 1];
-    let _ = reader.read_exact(&mut buf);
+    let _ = (*reader).read_exact(&mut buf);
     buf[0]
 }
 
-fn read_to_u16<R>(reader: &mut R) -> u16
-where R: Read + Seek 
+fn read_to_u16<R>(reader: &mut RefMut<R>) -> u16
+where
+    R: Read + Seek,
 {
     let mut buf = [0u8; 2];
     let _ = reader.read_exact(&mut buf);
-    u16::from_ne_bytes(buf) 
+    u16::from_ne_bytes(buf)
 }
 
-fn read_to_u32<R>(reader: &mut R) -> u32
-where R: Read + Seek 
+fn read_to_u32<R>(reader: &mut RefMut<R>) -> u32
+where
+    R: Read + Seek,
 {
     let mut buf = [0u8; 4];
     let _ = reader.read_exact(&mut buf);
     u32::from_ne_bytes(buf)
 }
 
-fn read_to_i16<R>(reader: &mut R) -> i16
-where R: Read + Seek 
+fn read_to_i16<R>(reader: &mut RefMut<R>) -> i16
+where
+    R: Read + Seek,
 {
     let mut buf = [0u8; 2];
     let _ = reader.read_exact(&mut buf);
     i16::from_ne_bytes(buf)
 }
 
-fn read_to_i32<R>(reader: &mut R) -> i32
-where R: Read + Seek 
+fn read_to_i32<R>(reader: &mut RefMut<R>) -> i32
+where
+    R: Read + Seek,
 {
     let mut buf = [0u8; 4];
     let _ = reader.read_exact(&mut buf);

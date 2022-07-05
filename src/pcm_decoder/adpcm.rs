@@ -1,11 +1,9 @@
 use super::DecoderTrait;
-
-pub struct Pcmi8<R> {
+pub struct Adpcm<R> {
     reader: R
-
 }
 
-impl<R> DecoderTrait<R> for Pcmi8<R> {
+impl<R> DecoderTrait<R> for Adpcm<R> {
     fn new(reader: R) {
         todo!()
     }
