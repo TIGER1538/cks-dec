@@ -5,15 +5,15 @@ pub struct Pcmf32<R> {
 }
 
 impl<R> DecoderTrait<R> for Pcmf32<R> {
-    fn new(reader: R) {
+    fn new(reader: R) -> Result<Pcmf32<R>, crate::error::Error> {
         todo!()
     }
 
-    fn decode_i32(&self, buf: &i32, frames: i32) -> i32 {
+    fn decode_i32(&self, buf: &mut i32, frames: i32) -> i32 {
         todo!()
     }
 
-    fn decode_float(&self, buf: &f32, frames: i32) -> i32 {
+    fn decode_float(&self, buf: &mut f32, frames: i32) -> i32 {
         todo!()
     }
 

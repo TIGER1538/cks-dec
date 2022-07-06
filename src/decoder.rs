@@ -1,4 +1,4 @@
-use crate::{frame::Frame, error::Error};
+use crate::error::Error;
 use crate::pcm_decoder::*;
 
 pub enum Decoder<R> {
