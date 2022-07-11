@@ -1,5 +1,5 @@
 pub mod decoder;
 pub mod sample;
 mod error;
-mod pcm_decoder;
+mod decoder_core;
 mod file_header;

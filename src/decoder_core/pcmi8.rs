@@ -1,11 +1,12 @@
-use super::DecoderTrait;
+use super::{DecoderTrait, CksError};
 
-pub struct Pcmf32<R> {
+pub struct Pcmi8<R> {
     reader: R
+
 }
 
-impl<R> DecoderTrait<R> for Pcmf32<R> {
-    fn new(reader: R) -> Result<Pcmf32<R>, crate::error::Error> {
+impl<R> DecoderTrait<R> for Pcmi8<R> {
+    fn new(reader: R) -> Result<Pcmi8<R>, CksError> {
         todo!()
     }
 

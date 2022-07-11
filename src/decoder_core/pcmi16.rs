@@ -4,7 +4,7 @@ use std::{
     rc::Rc,
 };
 
-use super::cks_error;
+use super::CksError;
 use super::DecoderTrait;
 use crate::{file_header::FileHeader, sample::info::SampleInfo};
 
@@ -18,7 +18,7 @@ impl<R> DecoderTrait<R> for Pcmi16<R>
 where
     R: Read + Seek,
 {
-    fn new(reader: R) -> Result<Pcmi16<R>, cks_error> {
+    fn new(reader: R) -> Result<Pcmi16<R>, CksError> {
         let reader_rc_cell = Rc::new(RefCell::new(reader));
         let header = FileHeader::new(Rc::clone(&reader_rc_cell))?;
         let sample_info = SampleInfo::new(Rc::clone(&reader_rc_cell));
@@ -33,7 +33,8 @@ where
         if self.is_done() {
             return 0;
         } else {
-            //let frames_read =
+            let _reader = self.reader.borrow_mut();
+            let frames_read = self.sample_info.
             todo!()
         }
     }
@@ -56,5 +57,11 @@ where
 
     fn get_num_frames(&self) -> i32 {
         todo!()
+    }
+}
+
+impl Pcmi16<R> {
+    fn decode() -> Result<i32, CksError> {
+
     }
 }

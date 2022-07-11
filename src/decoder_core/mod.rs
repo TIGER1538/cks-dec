@@ -1,12 +1,14 @@
-pub mod adpcm;
-pub mod pcmf32;
-pub mod pcmi16;
-pub mod pcmi8;
+//pub mod adpcm;
+//pub mod pcmf32;
+//pub mod pcmi16;
+//pub mod pcmi8;
+pub mod core;
 
-use super::error::Error as cks_error;
+use super::error::CksError;
 
-trait DecoderTrait<R> {
-    fn new(reader: R) -> Result<Self, cks_error>
+/*
+pub trait DecoderTrait<R> {
+    fn new(reader: R) -> Result<Self, CksError>
     where
         Self: Sized;
     fn decode_i32(&self, buf: &mut i32, frames: i32) -> i32;
@@ -16,3 +18,4 @@ trait DecoderTrait<R> {
     fn get_frame_pos(&self) -> i32;
     fn get_num_frames(&self) -> i32;
 }
+*/

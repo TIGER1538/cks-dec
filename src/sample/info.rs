@@ -1,22 +1,24 @@
 use std::cell::{RefCell, RefMut};
-use std::io::{Read, Seek};
+use std::io::{Read, Seek, SeekFrom};
 use std::rc::Rc;
+
+use crate::decoder::DecoderType;
 
 pub struct SampleInfo<R> {
     reader: Rc<RefCell<R>>,
-    format: u8,
-    channels: u8,
-    sample_rate: u16,
-    blocks: i32, // -1 means unknown
-    block_bytes: u16,
-    block_frames: u16,
+    pub format: DecoderType,
+    pub channels: u8,
+    pub sample_rate: u16,
+    pub blocks: i32, // -1 means unknown
+    pub block_bytes: u16,
+    pub block_frames: u16,
 
-    volume: u16,
-    pan: i16,
+    pub volume: u16,
+    pub pan: i16,
 
-    loop_start: u32, // default 0
-    loop_end: u32,   // default blocks * blockFrames
-    loop_count: i16, // default 0
+    pub loop_start: u32, // default 0
+    pub loop_end: u32,   // default blocks * blockFrames
+    pub loop_count: i16, // default 0
 }
 
 impl<R> SampleInfo<R>
@@ -36,7 +38,16 @@ where
         let loop_start = read_to_u32(&mut reader);
         let loop_end = read_to_u32(&mut reader);
         let loop_count = read_to_i16(&mut reader);
+        let _ = reader.seek(SeekFrom::Current(2));
         drop(reader);
+
+        let format = match format {
+            0 => DecoderType::Pcmi16,
+            1 => DecoderType::Pcmi8,
+            2 => DecoderType::Adpcm,
+            3 => DecoderType::Pcmf32,
+            _ => DecoderType::Unknown
+        };
 
         Self {
             reader: reader_rc,
@@ -57,7 +68,7 @@ where
     pub fn reset(self) -> Self {
         Self {
             reader: self.reader,
-            format: u8::max_value(),
+            format: DecoderType::Unknown,
             channels: 0,
             sample_rate: 0,
             blocks: 0,
@@ -71,6 +82,7 @@ where
         }
     }
 
+    /*
     pub fn read(self) -> Self {
         let mut reader = self.reader.borrow_mut();
         let format = read_to_u8(&mut reader);
@@ -101,6 +113,7 @@ where
             loop_count,
         }
     }
+    */
 }
 
 fn read_to_u8<R>(reader: &mut RefMut<R>) -> u8

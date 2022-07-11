@@ -1,10 +1,11 @@
-use super::DecoderTrait;
-pub struct Adpcm<R> {
+use super::{DecoderTrait, CksError};
+
+pub struct Pcmf32<R> {
     reader: R
 }
 
-impl<R> DecoderTrait<R> for Adpcm<R> {
-    fn new(reader: R) -> Result<Adpcm<R>, crate::error::Error> {
+impl<R> DecoderTrait<R> for Pcmf32<R> {
+    fn new(reader: R) -> Result<Pcmf32<R>, CksError> {
         todo!()
     }
 
