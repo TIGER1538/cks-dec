@@ -17,7 +17,7 @@ impl<R> FileHeader<R>
 where
     R: Seek + Read,
 {
-    pub fn new(mut reader_rc: Rc<RefCell<R>>) -> Result<Self, CksError> {
+    pub fn new(reader_rc: Rc<RefCell<R>>) -> Result<Self, CksError> {
         let mut reader = reader_rc.borrow_mut();
         let mut buffer_unit = [0u8; 4];
         let mut marker = String::with_capacity(4);

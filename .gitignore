@@ -1,3 +1,4 @@
 /target
 Cargo.lock
 components/*
+src/decoder_core/old
