@@ -1,11 +1,8 @@
-use std::cell::{RefCell, RefMut};
 use std::io::{Read, Seek, SeekFrom};
-use std::rc::Rc;
 
 use crate::decoder::DecoderType;
 
-pub struct SampleInfo<R> {
-    reader: Rc<RefCell<R>>,
+pub struct SampleInfo {
     pub format: DecoderType,
     pub channels: u8,
     pub sample_rate: u16,
@@ -21,12 +18,8 @@ pub struct SampleInfo<R> {
     pub loop_count: i16, // default 0
 }
 
-impl<R> SampleInfo<R>
-where
-    R: Seek + Read,
-{
-    pub fn new(reader_rc: Rc<RefCell<R>>) -> Self {
-        let mut reader = reader_rc.borrow_mut();
+impl SampleInfo {
+    pub fn new<R: Read + Seek>(mut reader: R) -> Self {
         let format = read_to_u8(&mut reader);
         let channels = read_to_u8(&mut reader);
         let sample_rate = read_to_u16(&mut reader);
@@ -39,7 +32,6 @@ where
         let loop_end = read_to_u32(&mut reader);
         let loop_count = read_to_i16(&mut reader);
         let _ = reader.seek(SeekFrom::Current(2));
-        drop(reader);
 
         let format = match format {
             0 => DecoderType::Pcmi16,
@@ -50,7 +42,6 @@ where
         };
 
         Self {
-            reader: reader_rc,
             format,
             channels,
             sample_rate,
@@ -67,7 +58,6 @@ where
 
     pub fn reset(self) -> Self {
         Self {
-            reader: self.reader,
             format: DecoderType::Unknown,
             channels: 0,
             sample_rate: 0,
@@ -116,7 +106,7 @@ where
     */
 }
 
-fn read_to_u8<R>(reader: &mut RefMut<R>) -> u8
+fn read_to_u8<R>(reader: &mut R) -> u8
 where
     R: Read + Seek,
 {
@@ -125,7 +115,7 @@ where
     buf[0]
 }
 
-fn read_to_u16<R>(reader: &mut RefMut<R>) -> u16
+fn read_to_u16<R>(reader: &mut R) -> u16
 where
     R: Read + Seek,
 {
@@ -134,7 +124,7 @@ where
     u16::from_ne_bytes(buf)
 }
 
-fn read_to_u32<R>(reader: &mut RefMut<R>) -> u32
+fn read_to_u32<R>(reader: &mut R) -> u32
 where
     R: Read + Seek,
 {
@@ -143,7 +133,7 @@ where
     u32::from_ne_bytes(buf)
 }
 
-fn read_to_i16<R>(reader: &mut RefMut<R>) -> i16
+fn read_to_i16<R>(reader: &mut R) -> i16
 where
     R: Read + Seek,
 {
@@ -152,7 +142,7 @@ where
     i16::from_ne_bytes(buf)
 }
 
-fn read_to_i32<R>(reader: &mut RefMut<R>) -> i32
+fn read_to_i32<R>(reader: &mut R) -> i32
 where
     R: Read + Seek,
 {

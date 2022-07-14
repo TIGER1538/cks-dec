@@ -1,24 +1,15 @@
 use crate::error::CksError;
-use std::{
-    cell::RefCell,
-    io::{Read, Seek},
-    rc::Rc,
-};
+use std::io::{Read, Seek};
 
-pub struct FileHeader<R> {
-    reader: Rc<RefCell<R>>,
+pub struct FileHeader {
     marker: String,
     targets: u32,
     file_type: u32,
     file_version: u32,
 }
 
-impl<R> FileHeader<R>
-where
-    R: Seek + Read,
-{
-    pub fn new(reader_rc: Rc<RefCell<R>>) -> Result<Self, CksError> {
-        let mut reader = reader_rc.borrow_mut();
+impl FileHeader {
+    pub fn new<R: Read + Seek>(mut reader: R) -> Result<Self, CksError> {
         let mut buffer_unit = [0u8; 4];
         let mut marker = String::with_capacity(4);
         let mut targets = 0;
@@ -47,7 +38,6 @@ where
         drop(reader);
 
         Ok(Self {
-            reader: reader_rc,
             marker,
             targets,
             file_type,

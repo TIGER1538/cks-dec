@@ -18,7 +18,6 @@ pub enum DecoderType
 pub struct Decoder<R>
 where R: Read + Seek
 {
-    //reader: R,
     decorder_core: DecoderCore<R>,
     decoder_type: DecoderType
 }
@@ -39,12 +38,16 @@ where R: Read + Seek
         })
     }
 
-    pub fn decode(&mut self, buf: &mut FormatType, blocks: usize) -> i32 {
-        self.decorder_core.decode(buf, blocks as i32) as i32
+    pub fn decode(&mut self, buf: &mut FormatType, blocks: usize) -> Option<u64> {
+        self.decorder_core.decode(buf, blocks as i32)
     }
 
     pub fn next(&self) {
 
+    }
+
+    pub fn into_inner(self) -> R {
+        self.decorder_core.into_inner()
     }
 
     fn is_cks(mut reader: R) -> bool {
