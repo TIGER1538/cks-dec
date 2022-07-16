@@ -5,7 +5,7 @@ use crate::error::CksError;
 use crate::decoder_core::core::DecoderCore;
 use super::FormatType;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum DecoderType
 {
     Adpcm,
@@ -26,6 +26,7 @@ impl<R> Decoder<R>
 where R: Read + Seek
 {
     pub fn new(mut reader: R) -> Result<Self, CksError> {
+        let _ = reader.rewind();
         if !Decoder::is_cks(reader.by_ref()) {
             return Err(CksError::NotCksFile);
         }
@@ -42,12 +43,16 @@ where R: Read + Seek
         self.decorder_core.decode(buf, blocks as i32)
     }
 
-    pub fn next(&self) {
-
+    pub fn next(&mut self, buf: &mut FormatType) -> Option<u64> {
+        self.decorder_core.decode(buf, 1)
     }
 
     pub fn into_inner(self) -> R {
         self.decorder_core.into_inner()
+    }
+
+    pub fn sample_info(&self) -> crate::sample::info::SampleInfo {
+        self.decorder_core.sample_info.clone()
     }
 
     fn is_cks(mut reader: R) -> bool {

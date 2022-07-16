@@ -17,25 +17,24 @@ impl FileHeader {
         let mut file_version = 0;
 
         reader
-            .read_exact(&mut buffer_unit)
-            .or(Err(CksError::FileRead))?;
-        for i in 0..4 {
-            marker.push(buffer_unit[i] as char);
+            .read_exact(&mut buffer_unit).unwrap();
+            //.or(Err(CksError::FileRead))?;
+        for c in buffer_unit {
+            marker.push(c as char);
         }
 
         reader
-            .read_exact(&mut buffer_unit)
-            .or(Err(CksError::FileRead))?;
+            .read_exact(&mut buffer_unit).unwrap();
+            //.or(Err(CksError::FileRead))?;
         write_header_info(&buffer_unit, &mut targets);
         reader
-            .read_exact(&mut buffer_unit)
-            .or(Err(CksError::FileRead))?;
+            .read_exact(&mut buffer_unit).unwrap();
+            //.or(Err(CksError::FileRead))?;
         write_header_info(&buffer_unit, &mut file_type);
         reader
-            .read_exact(&mut buffer_unit)
-            .or(Err(CksError::FileRead))?;
+            .read_exact(&mut buffer_unit).unwrap();
+            //.or(Err(CksError::FileRead))?;
         write_header_info(&buffer_unit, &mut file_version);
-        drop(reader);
 
         Ok(Self {
             marker,

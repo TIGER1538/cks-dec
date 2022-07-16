@@ -2,6 +2,7 @@ use std::io::{Read, Seek, SeekFrom};
 
 use crate::decoder::DecoderType;
 
+#[derive(Clone, Debug)]
 pub struct SampleInfo {
     pub format: DecoderType,
     pub channels: u8,

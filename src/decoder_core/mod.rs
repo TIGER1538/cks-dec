@@ -1,4 +1,4 @@
-//pub mod adpcm;
+mod adpcm;
 //pub mod pcmf32;
 //pub mod pcmi16;
 //pub mod pcmi8;

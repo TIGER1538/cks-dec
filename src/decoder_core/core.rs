@@ -1,4 +1,7 @@
-use std::{io::{Read, Seek, SeekFrom}, borrow::Borrow};
+use std::{
+    borrow::Borrow,
+    io::{Read, Seek, SeekFrom},
+};
 
 use super::super::FormatType;
 use crate::{audio_util, error::CksError, file_header::FileHeader, sample::info::SampleInfo};
@@ -11,7 +14,8 @@ where
     pub sample_info: SampleInfo,
     pub stream_size: u64,
     frame_starts: u64,
-    reader_buf: Vec<u8>
+    reader_buf: Vec<u8>,
+    audio_util_buf: audio_util::AudioUtil,
 }
 
 impl<R> DecoderCore<R>
@@ -23,18 +27,22 @@ where
         let stream_size = reader.seek(SeekFrom::End(0)).unwrap();
         if current_pos != 0 {
             let _ = reader.seek(SeekFrom::Start(current_pos));
+        } else {
+            let _ = reader.rewind();
         }
         let header = FileHeader::new(reader.by_ref())?;
         let sample_info = SampleInfo::new(reader.by_ref());
         let frame_starts = reader.stream_position().unwrap();
         let reader_buf = Vec::with_capacity(sample_info.block_bytes as usize * 2);
+        let audio_util_buf = audio_util::AudioUtil::new();
         Ok(Self {
             reader,
             header,
             sample_info,
             stream_size,
             frame_starts,
-            reader_buf
+            reader_buf,
+            audio_util_buf,
         })
     }
 
@@ -46,25 +54,38 @@ where
         } else {
             //let channels = self.sample_info.channels;
             let frames_read = self.read(blocks);
+            //println!("read: {:?}", self.reader_buf);
             match buf {
                 FormatType::Int32(buf_i32_v) => {
                     match self.sample_info.format {
                         //crate::decoder::DecoderType::Adpcm => todo!(),
-                        crate::decoder::DecoderType::Pcmi8 => audio_util::convert_i8_to_i32(&self.reader_buf, buf_i32_v),
-                        crate::decoder::DecoderType::Pcmi16 => audio_util::convert_i16_to_i32(&self.reader_buf, buf_i32_v),
-                        crate::decoder::DecoderType::Pcmf32 => audio_util::convert_f_to_i32(&self.reader_buf, buf_i32_v),
+                        crate::decoder::DecoderType::Pcmi8 => {
+                            self.audio_util_buf.convert_i8_to_i32(&self.reader_buf, buf_i32_v)
+                        }
+                        crate::decoder::DecoderType::Pcmi16 => {
+                            self.audio_util_buf.convert_i16_to_i32(&self.reader_buf, buf_i32_v)
+                        }
+                        crate::decoder::DecoderType::Pcmf32 => {
+                            self.audio_util_buf.convert_f_to_i32(&self.reader_buf, buf_i32_v)
+                        }
                         //crate::decoder::DecoderType::Unknown => todo!(),
-                        _ => {return None}
+                        _ => return None,
                     }
                 }
                 FormatType::Float(buf_f32_v) => {
                     match self.sample_info.format {
                         //crate::decoder::DecoderType::Adpcm => todo!(),
-                        crate::decoder::DecoderType::Pcmi8 => audio_util::convert_i8_f(&self.reader_buf, buf_f32_v),
-                        crate::decoder::DecoderType::Pcmi16 => audio_util::convert_i16_to_f(&self.reader_buf, buf_f32_v),
-                        crate::decoder::DecoderType::Pcmf32 => audio_util::convert_f_to_f(&self.reader_buf, buf_f32_v),
+                        crate::decoder::DecoderType::Pcmi8 => {
+                            self.audio_util_buf.convert_i8_f(&self.reader_buf, buf_f32_v)
+                        }
+                        crate::decoder::DecoderType::Pcmi16 => {
+                            self.audio_util_buf.convert_i16_to_f(&self.reader_buf, buf_f32_v)
+                        }
+                        crate::decoder::DecoderType::Pcmf32 => {
+                            self.audio_util_buf.convert_f_to_f(&self.reader_buf, buf_f32_v)
+                        }
                         //crate::decoder::DecoderType::Unknown => todo!(),
-                        _ => {return None}
+                        _ => return None,
                     }
                 }
             }
@@ -105,25 +126,23 @@ where
         let bytes_to_end =
             std::cmp::max(self.stream_size - self.reader.stream_position().unwrap(), 0);
         let bytes_to_read = std::cmp::min(bytes as u64, bytes_to_end) as usize;
+        //println!("{}", bytes_to_read);
         if bytes_to_read > 0 {
             //let mut buf_f = [0_u8; 4];
             if buf.len() <= bytes_to_read {
                 buf.resize(bytes_to_read, 0);
             }
             self.reader.read(&mut buf[0..bytes_to_read]).unwrap();
-            
-            /*          
+
+            /*
             for i in 0..size_needed {
                 self.reader.read_exact(&mut buf_f).unwrap();
                 buf[i] = f32::from_be_bytes(buf_f);
-            } 
+            }
             */
         }
         bytes_to_read as u64
     }
-    
-    //fn read_i32(&mut buf: i32, blocks: i32) -> i32;
-    //fn read_float(&mut buf: i32, blocks: i32) -> i32;
 
     //frame starts with 0.
     pub fn set_frame_pos(&mut self, frame: i32) {
