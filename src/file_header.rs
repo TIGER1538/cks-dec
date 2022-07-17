@@ -9,7 +9,7 @@ pub struct FileHeader {
 }
 
 impl FileHeader {
-    pub fn new<R: Read + Seek>(mut reader: R) -> Result<Self, CksError> {
+    pub(crate) fn new<R: Read + Seek>(mut reader: R) -> Result<Self, CksError> {
         let mut buffer_unit = [0u8; 4];
         let mut marker = String::with_capacity(4);
         let mut targets = 0;

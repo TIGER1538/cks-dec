@@ -4,25 +4,32 @@ use std::{
 };
 
 use super::super::FormatType;
-use crate::{audio_util, error::CksError, file_header::FileHeader, sample::info::SampleInfo};
+use crate::{
+    audio_util, 
+    decoder_core::adpcm::AdpcmCore, 
+    error::CksError, 
+    file_header::FileHeader,
+    sample::info::SampleInfo,
+};
 pub struct DecoderCore<R>
 where
     R: Seek + Read,
 {
-    reader: R,
-    pub header: FileHeader,
-    pub sample_info: SampleInfo,
-    pub stream_size: u64,
+    pub(crate) reader: R,
+    pub(crate) header: FileHeader,
+    pub(crate) sample_info: SampleInfo,
+    pub(crate) stream_size: u64,
     frame_starts: u64,
     reader_buf: Vec<u8>,
     audio_util_buf: audio_util::AudioUtil,
+    pub(crate) adpcm_core: Option<AdpcmCore>,
 }
 
 impl<R> DecoderCore<R>
 where
     R: Seek + Read,
 {
-    pub fn new(mut reader: R) -> Result<Self, CksError> {
+    pub(crate) fn new(mut reader: R) -> Result<Self, CksError> {
         let current_pos = reader.seek(SeekFrom::Current(0)).unwrap();
         let stream_size = reader.seek(SeekFrom::End(0)).unwrap();
         if current_pos != 0 {
@@ -43,11 +50,12 @@ where
             frame_starts,
             reader_buf,
             audio_util_buf,
+            adpcm_core: None
         })
     }
 
     //return amount of frames which read.
-    pub fn decode(&mut self, buf: &mut FormatType, blocks: i32) -> Option<u64> {
+    pub(crate) fn decode(&mut self, buf: &mut FormatType, blocks: i32) -> Option<u64> {
         if self.is_done() {
             //no frames to read.
             None
@@ -59,15 +67,15 @@ where
                 FormatType::Int32(buf_i32_v) => {
                     match self.sample_info.format {
                         //crate::decoder::DecoderType::Adpcm => todo!(),
-                        crate::decoder::DecoderType::Pcmi8 => {
-                            self.audio_util_buf.convert_i8_to_i32(&self.reader_buf, buf_i32_v)
-                        }
-                        crate::decoder::DecoderType::Pcmi16 => {
-                            self.audio_util_buf.convert_i16_to_i32(&self.reader_buf, buf_i32_v)
-                        }
-                        crate::decoder::DecoderType::Pcmf32 => {
-                            self.audio_util_buf.convert_f_to_i32(&self.reader_buf, buf_i32_v)
-                        }
+                        crate::decoder::DecoderType::Pcmi8 => self
+                            .audio_util_buf
+                            .convert_i8_to_i32(&self.reader_buf, buf_i32_v),
+                        crate::decoder::DecoderType::Pcmi16 => self
+                            .audio_util_buf
+                            .convert_i16_to_i32(&self.reader_buf, buf_i32_v),
+                        crate::decoder::DecoderType::Pcmf32 => self
+                            .audio_util_buf
+                            .convert_f_to_i32(&self.reader_buf, buf_i32_v),
                         //crate::decoder::DecoderType::Unknown => todo!(),
                         _ => return None,
                     }
@@ -75,15 +83,15 @@ where
                 FormatType::Float(buf_f32_v) => {
                     match self.sample_info.format {
                         //crate::decoder::DecoderType::Adpcm => todo!(),
-                        crate::decoder::DecoderType::Pcmi8 => {
-                            self.audio_util_buf.convert_i8_f(&self.reader_buf, buf_f32_v)
-                        }
-                        crate::decoder::DecoderType::Pcmi16 => {
-                            self.audio_util_buf.convert_i16_to_f(&self.reader_buf, buf_f32_v)
-                        }
-                        crate::decoder::DecoderType::Pcmf32 => {
-                            self.audio_util_buf.convert_f_to_f(&self.reader_buf, buf_f32_v)
-                        }
+                        crate::decoder::DecoderType::Pcmi8 => self
+                            .audio_util_buf
+                            .convert_i8_f(&self.reader_buf, buf_f32_v),
+                        crate::decoder::DecoderType::Pcmi16 => self
+                            .audio_util_buf
+                            .convert_i16_to_f(&self.reader_buf, buf_f32_v),
+                        crate::decoder::DecoderType::Pcmf32 => self
+                            .audio_util_buf
+                            .convert_f_to_f(&self.reader_buf, buf_f32_v),
                         //crate::decoder::DecoderType::Unknown => todo!(),
                         _ => return None,
                     }
@@ -120,7 +128,7 @@ where
     }
     */
 
-    fn read(&mut self, blocks: i32) -> u64 {
+    pub(crate) fn read(&mut self, blocks: i32) -> u64 {
         let buf = &mut self.reader_buf;
         let bytes = blocks * self.sample_info.block_bytes as i32;
         let bytes_to_end =
@@ -129,7 +137,7 @@ where
         //println!("{}", bytes_to_read);
         if bytes_to_read > 0 {
             //let mut buf_f = [0_u8; 4];
-            if buf.len() <= bytes_to_read {
+            if buf.len() < bytes_to_read {
                 buf.resize(bytes_to_read, 0);
             }
             self.reader.read(&mut buf[0..bytes_to_read]).unwrap();
@@ -145,23 +153,23 @@ where
     }
 
     //frame starts with 0.
-    pub fn set_frame_pos(&mut self, frame: i32) {
+    pub(crate) fn set_frame_pos(&mut self, frame: i32) {
         let _ = self.reader.seek(SeekFrom::Start(
             self.frame_starts + (frame as u64 * self.sample_info.block_bytes as u64),
         ));
     }
 
-    pub fn get_frame_pos(&mut self) -> u64 {
+    pub(crate) fn get_frame_pos(&mut self) -> u64 {
         self.reader.stream_position().unwrap() / (self.sample_info.block_bytes as u64)
     }
 
-    pub fn get_num_frames(&mut self) -> u64 {
+    pub(crate) fn get_num_frames(&mut self) -> u64 {
         let current_pos = self.reader.stream_position().unwrap();
         ((current_pos as i64 - self.frame_starts as i64) / (self.sample_info.block_bytes as i64))
             as u64
     }
 
-    pub fn into_inner(self) -> R {
+    pub(crate) fn into_inner(self) -> R {
         self.reader
     }
 }

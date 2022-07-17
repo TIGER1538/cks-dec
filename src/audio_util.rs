@@ -1,4 +1,4 @@
-pub struct AudioUtil {
+pub(crate) struct AudioUtil {
     four_bytes: [u8; 4],
     two_bytes: [u8; 2],
 }
