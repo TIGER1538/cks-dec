@@ -61,6 +61,11 @@ where
             None
         } else {
             //let channels = self.sample_info.channels;
+            
+            if let FormatType::Int16(buf_i16_v) = buf {
+                return Some(AdpcmCore::decode(self, buf_i16_v).unwrap() as _);
+            }
+
             let frames_read = self.read(blocks);
             //println!("read: {:?}", self.reader_buf);
             match buf {
@@ -96,6 +101,7 @@ where
                         _ => return None,
                     }
                 }
+                _ => {return None;}
             }
             Some(frames_read)
         }

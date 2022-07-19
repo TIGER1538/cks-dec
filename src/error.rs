@@ -9,3 +9,9 @@ pub enum CksError {
     SkippedData,
     EoF,
 }
+
+#[derive(Debug)]
+pub enum AdpcmError {
+    InvalidStride,
+    NoEnoughInputBytes,
+}
