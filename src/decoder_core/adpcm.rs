@@ -2,7 +2,7 @@ use crate::{
     decoder_core::core::DecoderCore,
     error::{AdpcmError, CksError},
 };
-use std::io::{Read, Seek};
+use std::io::{Read, Seek, SeekFrom};
 
 #[derive(Debug)]
 pub(crate) struct AdpcmCore {
@@ -29,8 +29,13 @@ static ADAPTION_TABLE: [i16; 16] = [
     230, 230, 230, 230, 307, 409, 512, 614, 768, 614, 512, 409, 307, 230, 230, 230,
 ];
 
+//static mut TEST_I: usize = 0;
+
 impl AdpcmCore {
-    pub fn decode<R: Read + Seek>(decoder_core: &mut DecoderCore<R>, output_buf: &mut [i16]) -> Option<usize> {
+    pub fn decode<R: Read + Seek>(
+        decoder_core: &mut DecoderCore<R>,
+        output_buf: &mut [i16],
+    ) -> Option<usize> {
         let mut decoded_bytes = 0;
         if let None = decoder_core.adpcm_core {
             decoder_core.adpcm_core = Some(Self {
@@ -42,12 +47,24 @@ impl AdpcmCore {
         assert!(block_read == Some(1) || block_read == None);
 
         let buf_read = &mut decoder_core.adpcm_core.as_mut().unwrap().buf;
-        if block_read == Some(0) {
+        if block_read == None {
             return None;
         } else {
-            decoded_bytes += Self::dec_core(&buf_read[..], BYTES_PER_BLOCK_DEFAULT, output_buf, decoder_core.sample_info.channels).unwrap();
+            decoded_bytes += Self::dec_core(
+                &buf_read[..BYTES_PER_BLOCK_DEFAULT],
+                BYTES_PER_BLOCK_DEFAULT,
+                &mut output_buf[..BYTES_PER_BLOCK_DEFAULT],
+                decoder_core.sample_info.channels,
+            )
+            .unwrap();
             if decoder_core.sample_info.channels == 2 {
-                decoded_bytes += Self::dec_core(&buf_read[BYTES_PER_BLOCK_DEFAULT..], BYTES_PER_BLOCK_DEFAULT, output_buf, decoder_core.sample_info.channels).unwrap();
+                decoded_bytes += Self::dec_core(
+                    &buf_read[BYTES_PER_BLOCK_DEFAULT..],
+                    BYTES_PER_BLOCK_DEFAULT,
+                    &mut output_buf[BYTES_PER_BLOCK_DEFAULT..],
+                    decoder_core.sample_info.channels,
+                )
+                .unwrap();
             }
         }
         Some(decoded_bytes)
@@ -67,16 +84,19 @@ impl AdpcmCore {
             return Err(AdpcmError::NoEnoughInputBytes);
         }
         let output_stride = output_stride as usize;
+        let (mut input_index, mut output_index) = (0_usize, 0);
 
         let input_end = input_byte;
-        let predictor = in_buf[0] as usize;
-        let mut delta = i16::from_be_bytes(in_buf[1..3].try_into().unwrap());
+        let predictor = in_buf[input_index] as usize;
+        input_index += 1;
+        let mut delta = i16::from_be_bytes(in_buf[input_index..input_index+2].try_into().unwrap());
+        input_index += 2;
         let (mut samp2, mut samp1) = (
-            i16::from_be_bytes(in_buf[3..5].try_into().unwrap()),
-            i16::from_be_bytes(in_buf[5..7].try_into().unwrap()),
+            i16::from_be_bytes(in_buf[input_index..input_index+2].try_into().unwrap()),
+            i16::from_be_bytes(in_buf[input_index+2..input_index+4].try_into().unwrap()),
         );
-
-        let (mut input_index, mut output_index) = (7_usize, 0);
+        input_index += 4;
+        
         out_buf[output_index] = samp2;
         output_index += output_stride;
         out_buf[output_index] = samp1;
@@ -100,7 +120,8 @@ impl AdpcmCore {
                 output_index += output_stride;
 
                 //println!("{}, {}", delta, ADAPTION_TABLE[error_delta as usize]);
-                delta = ((delta as isize * ADAPTION_TABLE[error_delta as usize] as isize) as i16 / FIXED_POINT_ADAPTION_BASE as i16) as i16;
+                delta = ((delta as isize * ADAPTION_TABLE[error_delta as usize] as isize) as i16
+                    / FIXED_POINT_ADAPTION_BASE as i16) as i16;
                 if delta < MIN_DELTA {
                     delta = MIN_DELTA;
                 }
@@ -144,10 +165,11 @@ impl AdpcmCore {
 
     fn read<R: Read + Seek>(decoder_core: &mut DecoderCore<R>, blocks: usize) -> Option<u64> {
         let core = decoder_core.adpcm_core.as_mut().unwrap();
-        let bytes = core.buf.len();
+        let mut bytes = core.buf.len();
         let buf = &mut core.buf;
         if bytes != BYTES_PER_BLOCK_DEFAULT * 2 {
             buf.resize(BYTES_PER_BLOCK_DEFAULT * 2, 0);
+            bytes = buf.len();
         }
         let bytes_to_end = std::cmp::max(
             decoder_core.stream_size - decoder_core.reader.stream_position().unwrap(),
@@ -155,17 +177,36 @@ impl AdpcmCore {
         );
         let bytes_to_read = std::cmp::min(bytes as u64, bytes_to_end) as usize;
         if bytes_to_read > 0 {
-            if buf.len() < bytes_to_read {
-                buf.resize(bytes_to_read, 0);
+            while let Ok(res) = decoder_core.reader.read(&mut buf[0..bytes_to_read]) {
+                if res != bytes_to_read {
+                    decoder_core
+                        .reader
+                        .seek(SeekFrom::Current(-1 * (res as i64)))
+                        .unwrap();
+                } else {
+                    break;
+                }
             }
-            decoder_core
-                .reader
-                .read(&mut buf[0..bytes_to_read])
-                .unwrap();
         } else {
+            eprintln!("NONE!");
             return None;
         }
-        println!("{:?}", buf);
+        
+        /* 
+        unsafe {
+            println!(
+                "block.{} -> {:#04X?} -> {:#04X?}",
+                TEST_I,
+                &buf[0..3],
+                &buf[45..48]
+            );
+            if TEST_I == 169 || TEST_I == 170 || TEST_I == 171 {
+                println!("{:#04X?}", buf);
+            }
+            TEST_I += 1;
+        }
+        */
+        
         Some((bytes_to_read / (BYTES_PER_BLOCK_DEFAULT * 2)) as _)
     }
 }

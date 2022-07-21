@@ -1,6 +1,5 @@
-use std::io::{BufReader, Seek, Read};
+use std::io::{Seek, Read};
 
-use crate::decoder_core;
 use crate::error::CksError;
 use crate::decoder_core::core::DecoderCore;
 use super::FormatType;

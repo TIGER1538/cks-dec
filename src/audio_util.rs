@@ -11,6 +11,7 @@ impl AudioUtil {
         }
     }
 
+    #[inline]
     pub fn convert_f_to_i32(&mut self, in_buf: &[u8], out_buf: &mut [i32]) {
         let mut _buf = [0_u8; 4];
         //assert_eq!(out_buf.len(), in_buf.len());
@@ -21,6 +22,7 @@ impl AudioUtil {
         }
     }
 
+    #[inline]
     pub fn convert_f_to_i16(&mut self, in_buf: &[u8], out_buf: &mut [i16]) {
         let mut _buf = [0_u8; 4];
         //assert_eq!(out_buf.len(), in_buf.len());
@@ -31,6 +33,7 @@ impl AudioUtil {
         }
     }
 
+    #[inline]
     pub fn convert_i32_to_f(&mut self, in_buf: &[u8], out_buf: &mut [f32]) {
         let mut _buf = [0_u8; 4];
         //assert_eq!(out_buf.len(), in_buf.len());
@@ -42,6 +45,7 @@ impl AudioUtil {
         }
     }
 
+    #[inline]
     pub fn convert_i32_to_i16(&mut self, in_buf: &[u8], out_buf: &mut [i16]) {
         let mut _buf = [0_u8; 4];
         //assert_eq!(out_buf.len(), in_buf.len());
@@ -52,6 +56,7 @@ impl AudioUtil {
         }
     }
 
+    #[inline]
     pub fn convert_i16_to_f(&mut self, in_buf: &[u8], out_buf: &mut [f32]) {
         let mut _buf = [0_u8; 2];
         //assert_eq!(out_buf.len(), in_buf.len());
@@ -64,6 +69,7 @@ impl AudioUtil {
         }
     }
 
+    #[inline]
     pub fn convert_i16_to_i32(&mut self, in_buf: &[u8], out_buf: &mut [i32]) {
         let mut _buf = [0_u8; 2];
         //assert_eq!(out_buf.len(), in_buf.len());
@@ -75,6 +81,7 @@ impl AudioUtil {
         }
     }
 
+    #[inline]
     pub fn convert_i8_f(&mut self, in_buf: &[u8], out_buf: &mut [f32]) {
         //assert_eq!(out_buf.len(), in_buf.len());
         let factor = 1.0_f32 / i8::MAX as f32;
@@ -84,6 +91,7 @@ impl AudioUtil {
         }
     }
 
+    #[inline]
     pub fn convert_i8_to_i32(&mut self, in_buf: &[u8], out_buf: &mut [i32]) {
         //assert_eq!(out_buf.len(), in_buf.len());
         let itr = (0..in_buf.len()).rev();
@@ -92,6 +100,7 @@ impl AudioUtil {
         }
     }
 
+    #[inline]
     pub fn convert_f_to_f(&mut self, in_buf: &[u8], out_buf: &mut [f32]) {
         let mut _buf = [0_u8; 4];
         for i in 0..in_buf.len() / 4 {

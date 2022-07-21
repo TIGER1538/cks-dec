@@ -1,7 +1,4 @@
-use std::{
-    borrow::Borrow,
-    io::{Read, Seek, SeekFrom},
-};
+use std::io::{Read, Seek, SeekFrom};
 
 use super::super::FormatType;
 use crate::{
