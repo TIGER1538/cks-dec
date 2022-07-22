@@ -53,7 +53,7 @@ impl AdpcmCore {
             decoded_bytes += Self::dec_core(
                 &buf_read[..BYTES_PER_BLOCK_DEFAULT],
                 BYTES_PER_BLOCK_DEFAULT,
-                &mut output_buf[..BYTES_PER_BLOCK_DEFAULT],
+                output_buf,
                 decoder_core.sample_info.channels,
             )
             .unwrap();
@@ -61,7 +61,7 @@ impl AdpcmCore {
                 decoded_bytes += Self::dec_core(
                     &buf_read[BYTES_PER_BLOCK_DEFAULT..],
                     BYTES_PER_BLOCK_DEFAULT,
-                    &mut output_buf[BYTES_PER_BLOCK_DEFAULT..],
+                    &mut output_buf[1..],
                     decoder_core.sample_info.channels,
                 )
                 .unwrap();
@@ -105,7 +105,7 @@ impl AdpcmCore {
         let coef1 = COEFFS[predictor][0];
         let coef2 = COEFFS[predictor][1];
 
-        while output_index < input_end {
+        while input_index < input_end {
             for nybble in 0..2 {
                 let mut pred_samp =
                     ((samp1 as i32 * coef1) + (samp2 as i32 * coef2)) / FIXED_POINT_COEF_BASE;
@@ -159,7 +159,8 @@ impl AdpcmCore {
         }
         */
 
-        let output_samples = (out_buf.len()) / output_stride;
+        let output_samples = output_index / output_stride;
+        assert_eq!(output_samples, 2*input_byte - 12);
         Ok(output_samples)
     }
 
@@ -167,8 +168,8 @@ impl AdpcmCore {
         let core = decoder_core.adpcm_core.as_mut().unwrap();
         let mut bytes = core.buf.len();
         let buf = &mut core.buf;
-        if bytes != BYTES_PER_BLOCK_DEFAULT * 2 {
-            buf.resize(BYTES_PER_BLOCK_DEFAULT * 2, 0);
+        if bytes != BYTES_PER_BLOCK_DEFAULT * 2 * blocks {
+            buf.resize(BYTES_PER_BLOCK_DEFAULT * 2* blocks, 0);
             bytes = buf.len();
         }
         let bytes_to_end = std::cmp::max(
@@ -206,7 +207,7 @@ impl AdpcmCore {
             TEST_I += 1;
         }
         */
-        
+        //println!("read({}): {:?}", bytes_to_read, buf);
         Some((bytes_to_read / (BYTES_PER_BLOCK_DEFAULT * 2)) as _)
     }
 }

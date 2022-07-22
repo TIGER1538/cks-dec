@@ -10,3 +10,13 @@ pub enum FormatType {
     Int32(Vec<i32>),
     Float(Vec<f32>),
 }
+
+impl FormatType {
+    pub fn len(&self) -> usize {
+        match self {
+            FormatType::Int16(v) => v.len(),
+            FormatType::Int32(v) => v.len(),
+            FormatType::Float(v) => v.len(),
+        }
+    }
+}

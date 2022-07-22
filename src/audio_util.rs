@@ -13,7 +13,7 @@ impl AudioUtil {
 
     #[inline]
     pub fn convert_f_to_i32(&mut self, in_buf: &[u8], out_buf: &mut [i32]) {
-        let mut _buf = [0_u8; 4];
+        let mut _buf = self.four_bytes;
         //assert_eq!(out_buf.len(), in_buf.len());
         for i in 0..in_buf.len() / 4 {
             _buf.copy_from_slice(&in_buf[4 * i..4 * i + 4]);
@@ -24,7 +24,7 @@ impl AudioUtil {
 
     #[inline]
     pub fn convert_f_to_i16(&mut self, in_buf: &[u8], out_buf: &mut [i16]) {
-        let mut _buf = [0_u8; 4];
+        let mut _buf = self.four_bytes;
         //assert_eq!(out_buf.len(), in_buf.len());
         for i in 0..in_buf.len() / 4 {
             _buf.copy_from_slice(&in_buf[4 * i..4 * i + 4]);
@@ -35,7 +35,7 @@ impl AudioUtil {
 
     #[inline]
     pub fn convert_i32_to_f(&mut self, in_buf: &[u8], out_buf: &mut [f32]) {
-        let mut _buf = [0_u8; 4];
+        let mut _buf = self.four_bytes;
         //assert_eq!(out_buf.len(), in_buf.len());
         let factor = 1.0_f32 / (1 << 24) as f32;
         for i in 0..in_buf.len() / 4 {
@@ -47,7 +47,7 @@ impl AudioUtil {
 
     #[inline]
     pub fn convert_i32_to_i16(&mut self, in_buf: &[u8], out_buf: &mut [i16]) {
-        let mut _buf = [0_u8; 4];
+        let mut _buf = self.four_bytes;
         //assert_eq!(out_buf.len(), in_buf.len());
         for i in 0..in_buf.len() / 4 {
             _buf.copy_from_slice(&in_buf[4 * i..4 * i + 4]);
@@ -58,7 +58,7 @@ impl AudioUtil {
 
     #[inline]
     pub fn convert_i16_to_f(&mut self, in_buf: &[u8], out_buf: &mut [f32]) {
-        let mut _buf = [0_u8; 2];
+        let mut _buf = self.two_bytes;
         //assert_eq!(out_buf.len(), in_buf.len());
         let factor = 1.0_f32 / i16::MAX as f32;
         let itr = (0..in_buf.len() / 2).rev();
@@ -71,7 +71,7 @@ impl AudioUtil {
 
     #[inline]
     pub fn convert_i16_to_i32(&mut self, in_buf: &[u8], out_buf: &mut [i32]) {
-        let mut _buf = [0_u8; 2];
+        let mut _buf = self.two_bytes;
         //assert_eq!(out_buf.len(), in_buf.len());
         let itr = (0..in_buf.len() / 2).rev();
         for i in itr {
@@ -102,7 +102,7 @@ impl AudioUtil {
 
     #[inline]
     pub fn convert_f_to_f(&mut self, in_buf: &[u8], out_buf: &mut [f32]) {
-        let mut _buf = [0_u8; 4];
+        let mut _buf = self.four_bytes;
         for i in 0..in_buf.len() / 4 {
             _buf.copy_from_slice(&in_buf[4 * i..4 * i + 4]);
             let f32_buf = f32::from_be_bytes(_buf);
