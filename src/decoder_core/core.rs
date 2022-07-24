@@ -56,19 +56,15 @@ where
         if self.is_done() {
             //no frames to read.
             None
-        } else {
-            //let channels = self.sample_info.channels;
-            
+        } else {            
             if let FormatType::Int16(buf_i16_v) = buf {
                 return Some(AdpcmCore::decode(self, buf_i16_v).unwrap() as _);
             }
 
             let frames_read = self.read(blocks);
-            //println!("read: {:?}", self.reader_buf);
             match buf {
                 FormatType::Int32(buf_i32_v) => {
                     match self.sample_info.format {
-                        //crate::decoder::DecoderType::Adpcm => todo!(),
                         crate::decoder::DecoderType::Pcmi8 => self
                             .audio_util_buf
                             .convert_i8_to_i32(&self.reader_buf, buf_i32_v),
@@ -78,13 +74,11 @@ where
                         crate::decoder::DecoderType::Pcmf32 => self
                             .audio_util_buf
                             .convert_f_to_i32(&self.reader_buf, buf_i32_v),
-                        //crate::decoder::DecoderType::Unknown => todo!(),
                         _ => return None,
                     }
                 }
                 FormatType::Float(buf_f32_v) => {
                     match self.sample_info.format {
-                        //crate::decoder::DecoderType::Adpcm => todo!(),
                         crate::decoder::DecoderType::Pcmi8 => self
                             .audio_util_buf
                             .convert_i8_f(&self.reader_buf, buf_f32_v),
@@ -94,65 +88,41 @@ where
                         crate::decoder::DecoderType::Pcmf32 => self
                             .audio_util_buf
                             .convert_f_to_f(&self.reader_buf, buf_f32_v),
-                        //crate::decoder::DecoderType::Unknown => todo!(),
                         _ => return None,
                     }
                 }
                 _ => {return None;}
             }
-            Some(frames_read)
+            frames_read
         }
     }
-    //fn decode_i32(&self, buf: &mut i32, frames: i32) -> i32;
-    //fn decode_float(&self, buf: &mut f32, frames: i32) -> i32;
+
     fn is_done(&mut self) -> bool {
         let current_pos = self.reader.stream_position().unwrap();
         current_pos >= self.stream_size
     }
 
-    /*
-    fn read_i32(&mut self, buf: &mut Vec<i32>, blocks: i32) -> u64 {
-        let bytes = blocks * self.sample_info.block_bytes as i32;
-        let bytes_to_end =
-            std::cmp::max(self.stream_size - self.reader.stream_position().unwrap(), 0);
-        let bytes_to_read = std::cmp::min(bytes as u64, bytes_to_end);
-        if bytes_to_read > 0 {
-            let mut buf_f = [0_u8; 4];
-            let size_needed = (bytes_to_read / 4) as usize;
-            if buf.len() <= size_needed {
-                buf.resize(size_needed, 0);
-            }
-            for i in 0..size_needed {
-                self.reader.read_exact(&mut buf_f);
-                buf[i] = i32::from_be_bytes(buf_f);
-            }
-        }
-        bytes_to_read
-    }
-    */
-
-    pub(crate) fn read(&mut self, blocks: i32) -> u64 {
+    pub(crate) fn read(&mut self, blocks: i32) -> Option<u64> {
         let buf = &mut self.reader_buf;
         let bytes = blocks * self.sample_info.block_bytes as i32;
         let bytes_to_end =
             std::cmp::max(self.stream_size - self.reader.stream_position().unwrap(), 0);
         let bytes_to_read = std::cmp::min(bytes as u64, bytes_to_end) as usize;
-        //println!("{}", bytes_to_read);
         if bytes_to_read > 0 {
-            //let mut buf_f = [0_u8; 4];
             if buf.len() < bytes_to_read {
                 buf.resize(bytes_to_read, 0);
             }
-            self.reader.read(&mut buf[0..bytes_to_read]).unwrap();
-
-            /*
-            for i in 0..size_needed {
-                self.reader.read_exact(&mut buf_f).unwrap();
-                buf[i] = f32::from_be_bytes(buf_f);
-            }
-            */
+            'check_bytes: while let Ok(bytes_read) = self.reader.read(&mut buf[0..bytes_to_read]) {
+                if bytes_read != bytes_to_read {
+                    self.reader.seek(SeekFrom::Current(-(bytes_read as i64))).unwrap();
+                } else {
+                    break 'check_bytes;
+                }
+            };
+        } else {
+            return None;
         }
-        bytes_to_read as u64
+        Some(bytes_to_read as u64)
     }
 
     //frame starts with 0.

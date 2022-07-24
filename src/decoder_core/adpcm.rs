@@ -1,6 +1,6 @@
 use crate::{
     decoder_core::core::DecoderCore,
-    error::{AdpcmError, CksError},
+    error::AdpcmError,
 };
 use std::io::{Read, Seek, SeekFrom};
 
@@ -10,11 +10,11 @@ pub(crate) struct AdpcmCore {
     buf: Vec<u8>,
 }
 
-static BYTES_PER_BLOCK_DEFAULT: usize = 24;
+pub(crate) static BYTES_PER_BLOCK_DEFAULT: usize = 24;
 static FIXED_POINT_COEF_BASE: i32 = 256;
 static FIXED_POINT_ADAPTION_BASE: i32 = 256;
 static CK_INT16_MIN: i16 = (-0x7FFF - 1) as i16;
-static CK_INT16_MAX: i16 = i16::MAX;
+static CK_INT16_MAX: i16 = 0x7FFF;
 static MIN_DELTA: i16 = 16;
 static COEFFS: [[i32; 2]; 7] = [
     [256, 0],
@@ -37,7 +37,7 @@ impl AdpcmCore {
         output_buf: &mut [i16],
     ) -> Option<usize> {
         let mut decoded_bytes = 0;
-        if let None = decoder_core.adpcm_core {
+        if decoder_core.adpcm_core.is_none() {
             decoder_core.adpcm_core = Some(Self {
                 bytes_per_block: BYTES_PER_BLOCK_DEFAULT,
                 buf: Vec::with_capacity(BYTES_PER_BLOCK_DEFAULT * 2),
@@ -89,11 +89,12 @@ impl AdpcmCore {
         let input_end = input_byte;
         let predictor = in_buf[input_index] as usize;
         input_index += 1;
-        let mut delta = i16::from_be_bytes(in_buf[input_index..input_index+2].try_into().unwrap());
+        //let mut delta = i16::from_be_bytes(in_buf[input_index..input_index+2].try_into().unwrap());
+        let mut delta = i16::from_le_bytes(in_buf[input_index..input_index+2].try_into().unwrap());
         input_index += 2;
         let (mut samp2, mut samp1) = (
-            i16::from_be_bytes(in_buf[input_index..input_index+2].try_into().unwrap()),
-            i16::from_be_bytes(in_buf[input_index+2..input_index+4].try_into().unwrap()),
+            i16::from_le_bytes(in_buf[input_index..input_index+2].try_into().unwrap()),
+            i16::from_le_bytes(in_buf[input_index+2..input_index+4].try_into().unwrap()),
         );
         input_index += 4;
         
@@ -109,19 +110,19 @@ impl AdpcmCore {
             for nybble in 0..2 {
                 let mut pred_samp =
                     ((samp1 as i32 * coef1) + (samp2 as i32 * coef2)) / FIXED_POINT_COEF_BASE;
-                let error_delta = (in_buf[input_index] >> (nybble * 4)) & 0xF;
+                let error_delta = ((in_buf[input_index] >> (nybble * 4)) & 0xF) as i32;
                 if (error_delta & 0x8) != 0 {
-                    pred_samp += delta as i32 * (error_delta as i32 - 0x10);
+                    pred_samp += delta as i32 * (error_delta - 0x10);
                 } else {
-                    pred_samp += delta as i32 * error_delta as i32;
+                    pred_samp += delta as i32 * error_delta;
                 }
                 let new_samp = clamp(pred_samp, CK_INT16_MIN as i32, CK_INT16_MAX as i32);
                 out_buf[output_index] = new_samp as i16;
                 output_index += output_stride;
 
                 //println!("{}, {}", delta, ADAPTION_TABLE[error_delta as usize]);
-                delta = ((delta as isize * ADAPTION_TABLE[error_delta as usize] as isize) as i16
-                    / FIXED_POINT_ADAPTION_BASE as i16) as i16;
+                delta = ((delta as isize * ADAPTION_TABLE[error_delta as usize] as isize)
+                    / FIXED_POINT_ADAPTION_BASE as isize) as i16;
                 if delta < MIN_DELTA {
                     delta = MIN_DELTA;
                 }
@@ -131,33 +132,6 @@ impl AdpcmCore {
             }
             input_index += 1;
         }
-
-        /*
-        for content_idx in input_index..input_end {
-            //let mut out_byte = 0_u8;
-            for nybble in 0..2 {
-                let mut pred_samp =
-                    ((samp1 as i32 * coef1) + (samp2 as i32 * coef2)) / FIXED_POINT_COEF_BASE;
-                let error_delta = (in_buf[content_idx] >> (nybble * 4)) & 0xF;
-                if (error_delta & 0x8) != 0 {
-                    pred_samp += delta as i32 * (error_delta as i32 - 0x10);
-                } else {
-                    pred_samp += delta as i32 * error_delta as i32;
-                }
-                let new_samp = clamp(pred_samp, CK_INT16_MIN as i32, CK_INT16_MAX as i32);
-                out_buf[output_index] = new_samp as i16;
-                output_index += output_stride;
-
-                delta = (delta * ADAPTION_TABLE[error_delta as usize] / FIXED_POINT_ADAPTION_BASE as i16) as i16;
-                if delta < MIN_DELTA {
-                    delta = MIN_DELTA;
-                }
-
-                samp2 = samp1;
-                samp1 = new_samp as i16;
-            }
-        }
-        */
 
         let output_samples = output_index / output_stride;
         assert_eq!(output_samples, 2*input_byte - 12);
@@ -178,14 +152,14 @@ impl AdpcmCore {
         );
         let bytes_to_read = std::cmp::min(bytes as u64, bytes_to_end) as usize;
         if bytes_to_read > 0 {
-            while let Ok(res) = decoder_core.reader.read(&mut buf[0..bytes_to_read]) {
+            'check_byte: while let Ok(res) = decoder_core.reader.read(&mut buf[0..bytes_to_read]) {
                 if res != bytes_to_read {
                     decoder_core
                         .reader
-                        .seek(SeekFrom::Current(-1 * (res as i64)))
+                        .seek(SeekFrom::Current(-(res as i64)))
                         .unwrap();
                 } else {
-                    break;
+                    break 'check_byte;
                 }
             }
         } else {
@@ -193,21 +167,6 @@ impl AdpcmCore {
             return None;
         }
         
-        /* 
-        unsafe {
-            println!(
-                "block.{} -> {:#04X?} -> {:#04X?}",
-                TEST_I,
-                &buf[0..3],
-                &buf[45..48]
-            );
-            if TEST_I == 169 || TEST_I == 170 || TEST_I == 171 {
-                println!("{:#04X?}", buf);
-            }
-            TEST_I += 1;
-        }
-        */
-        //println!("read({}): {:?}", bytes_to_read, buf);
         Some((bytes_to_read / (BYTES_PER_BLOCK_DEFAULT * 2)) as _)
     }
 }

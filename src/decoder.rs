@@ -55,7 +55,7 @@ where R: Read + Seek
     }
 
     fn is_cks(mut reader: R) -> bool {
-        let cks_marker = ['c' as u8, 'k' as u8, 'm' as u8, 'k' as u8];
+        let cks_marker = [b'c', b'k', b'm', b'k'];
         let mut buf = [0u8; 4];
         let current_pos = reader.stream_position().unwrap();
         if current_pos != 0 {
@@ -69,18 +69,40 @@ where R: Read + Seek
 
 #[test]
 fn t() {
-    use crate::audio_util::AudioUtil;
+    use std::io::Write;
+    //use crate::audio_util::AudioUtil;
     let file_buf = std::io::BufReader::new(std::fs::File::open("components/BB0000.cks").unwrap());
+    let out = std::fs::File::create("out.raw").unwrap();
+    let mut out_b = std::io::BufWriter::new(out);
     let mut dec = Decoder::new(file_buf).unwrap();
     //let mut audio_util = AudioUtil::new();
-    let buf = vec![0_i16; 72];
-    let mut buf = FormatType::Int16(buf);
-    let res = dec.decode(&mut buf, 1);
-    
-    println!("dec: {}", res.unwrap());
-    if let FormatType::Int16(v) = buf {
-        //AudioUtil::convert_i16_to_f(&mut audio_util, in_buf, out_buf);
-        println!("{:?}", v);
+    //let buf = vec![0_i16; 72];
+    //let mut buf = FormatType::Int16(buf);
+    let mut buf = FormatType::new_int16();
+
+    //let mut current_frame = 0;
+    while let Some(_) = dec.decode(&mut buf, 1) {
+        if let FormatType::Int16(v) = &buf {
+            //println!("{:#04X?}", v);
+            for b in v.iter() {
+                let _buf = b as *const i16 as *const [u8; 2];
+                unsafe {
+                    let _ = out_b.write(&*_buf);
+                }
+            }
+            
+            //AudioUtil::convert_i16_to_f(&mut audio_util, in_buf, out_buf);
+            //println!("{:?}", v);
+        }
     }
     
+    
+}
+
+#[test]
+fn v() {
+    let buf0 = vec![0_i16; 72];
+    let buf0 = FormatType::Int16(buf0);
+    let buf1 = FormatType::new_int16();
+    assert_eq!(buf0, buf1);
 }
