@@ -1,7 +1,4 @@
-use crate::{
-    decoder_core::core::DecoderCore,
-    error::AdpcmError,
-};
+use crate::{decoder_core::core::DecoderCore, error::AdpcmError};
 use std::io::{Read, Seek, SeekFrom};
 
 #[derive(Debug)]
@@ -90,14 +87,15 @@ impl AdpcmCore {
         let predictor = in_buf[input_index] as usize;
         input_index += 1;
         //let mut delta = i16::from_be_bytes(in_buf[input_index..input_index+2].try_into().unwrap());
-        let mut delta = i16::from_le_bytes(in_buf[input_index..input_index+2].try_into().unwrap());
+        let mut delta =
+            i16::from_le_bytes(in_buf[input_index..input_index + 2].try_into().unwrap());
         input_index += 2;
         let (mut samp2, mut samp1) = (
-            i16::from_le_bytes(in_buf[input_index..input_index+2].try_into().unwrap()),
-            i16::from_le_bytes(in_buf[input_index+2..input_index+4].try_into().unwrap()),
+            i16::from_le_bytes(in_buf[input_index..input_index + 2].try_into().unwrap()),
+            i16::from_le_bytes(in_buf[input_index + 2..input_index + 4].try_into().unwrap()),
         );
         input_index += 4;
-        
+
         out_buf[output_index] = samp2;
         output_index += output_stride;
         out_buf[output_index] = samp1;
@@ -134,7 +132,7 @@ impl AdpcmCore {
         }
 
         let output_samples = output_index / output_stride;
-        assert_eq!(output_samples, 2*input_byte - 12);
+        assert_eq!(output_samples, 2 * input_byte - 12);
         Ok(output_samples)
     }
 
@@ -143,7 +141,7 @@ impl AdpcmCore {
         let mut bytes = core.buf.len();
         let buf = &mut core.buf;
         if bytes != BYTES_PER_BLOCK_DEFAULT * 2 * blocks {
-            buf.resize(BYTES_PER_BLOCK_DEFAULT * 2* blocks, 0);
+            buf.resize(BYTES_PER_BLOCK_DEFAULT * 2 * blocks, 0);
             bytes = buf.len();
         }
         let bytes_to_end = std::cmp::max(
@@ -166,7 +164,7 @@ impl AdpcmCore {
             eprintln!("NONE!");
             return None;
         }
-        
+
         Some((bytes_to_read / (BYTES_PER_BLOCK_DEFAULT * 2)) as _)
     }
 }

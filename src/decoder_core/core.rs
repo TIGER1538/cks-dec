@@ -2,9 +2,9 @@ use std::io::{Read, Seek, SeekFrom};
 
 use super::super::FormatType;
 use crate::{
-    audio_util, 
-    decoder_core::adpcm::AdpcmCore, 
-    error::CksError, 
+    audio_util::{self, AudioUtil},
+    decoder_core::adpcm::AdpcmCore,
+    error::CksError,
     file_header::FileHeader,
     sample::info::SampleInfo,
 };
@@ -18,7 +18,6 @@ where
     pub(crate) stream_size: u64,
     frame_starts: u64,
     reader_buf: Vec<u8>,
-    audio_util_buf: audio_util::AudioUtil,
     pub(crate) adpcm_core: Option<AdpcmCore>,
 }
 
@@ -38,7 +37,6 @@ where
         let sample_info = SampleInfo::new(reader.by_ref());
         let frame_starts = reader.stream_position().unwrap();
         let reader_buf = Vec::with_capacity(sample_info.block_bytes as usize * 2);
-        let audio_util_buf = audio_util::AudioUtil::new();
         Ok(Self {
             reader,
             header,
@@ -46,8 +44,7 @@ where
             stream_size,
             frame_starts,
             reader_buf,
-            audio_util_buf,
-            adpcm_core: None
+            adpcm_core: None,
         })
     }
 
@@ -56,42 +53,40 @@ where
         if self.is_done() {
             //no frames to read.
             None
-        } else {            
+        } else {
             if let FormatType::Int16(buf_i16_v) = buf {
                 return Some(AdpcmCore::decode(self, buf_i16_v).unwrap() as _);
             }
 
             let frames_read = self.read(blocks);
             match buf {
-                FormatType::Int32(buf_i32_v) => {
-                    match self.sample_info.format {
-                        crate::decoder::DecoderType::Pcmi8 => self
-                            .audio_util_buf
-                            .convert_i8_to_i32(&self.reader_buf, buf_i32_v),
-                        crate::decoder::DecoderType::Pcmi16 => self
-                            .audio_util_buf
-                            .convert_i16_to_i32(&self.reader_buf, buf_i32_v),
-                        crate::decoder::DecoderType::Pcmf32 => self
-                            .audio_util_buf
-                            .convert_f_to_i32(&self.reader_buf, buf_i32_v),
-                        _ => return None,
+                FormatType::Int32(buf_i32_v) => match self.sample_info.format {
+                    crate::decoder::DecoderType::Pcmi8 => {
+                        AudioUtil::convert_i8_to_i32(&self.reader_buf, buf_i32_v)
                     }
-                }
-                FormatType::Float(buf_f32_v) => {
-                    match self.sample_info.format {
-                        crate::decoder::DecoderType::Pcmi8 => self
-                            .audio_util_buf
-                            .convert_i8_f(&self.reader_buf, buf_f32_v),
-                        crate::decoder::DecoderType::Pcmi16 => self
-                            .audio_util_buf
-                            .convert_i16_to_f(&self.reader_buf, buf_f32_v),
-                        crate::decoder::DecoderType::Pcmf32 => self
-                            .audio_util_buf
-                            .convert_f_to_f(&self.reader_buf, buf_f32_v),
-                        _ => return None,
+                    crate::decoder::DecoderType::Pcmi16 => {
+                        AudioUtil::convert_i16_to_i32(&self.reader_buf, buf_i32_v)
                     }
+                    crate::decoder::DecoderType::Pcmf32 => {
+                        AudioUtil::convert_f_to_i32(&self.reader_buf, buf_i32_v)
+                    }
+                    _ => return None,
+                },
+                FormatType::Float(buf_f32_v) => match self.sample_info.format {
+                    crate::decoder::DecoderType::Pcmi8 => {
+                        AudioUtil::convert_i8_f(&self.reader_buf, buf_f32_v)
+                    }
+                    crate::decoder::DecoderType::Pcmi16 => {
+                        AudioUtil::convert_i16_to_f(&self.reader_buf, buf_f32_v)
+                    }
+                    crate::decoder::DecoderType::Pcmf32 => {
+                        AudioUtil::convert_f_to_f(&self.reader_buf, buf_f32_v)
+                    }
+                    _ => return None,
+                },
+                _ => {
+                    return None;
                 }
-                _ => {return None;}
             }
             frames_read
         }
@@ -114,11 +109,13 @@ where
             }
             'check_bytes: while let Ok(bytes_read) = self.reader.read(&mut buf[0..bytes_to_read]) {
                 if bytes_read != bytes_to_read {
-                    self.reader.seek(SeekFrom::Current(-(bytes_read as i64))).unwrap();
+                    self.reader
+                        .seek(SeekFrom::Current(-(bytes_read as i64)))
+                        .unwrap();
                 } else {
                     break 'check_bytes;
                 }
-            };
+            }
         } else {
             return None;
         }

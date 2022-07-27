@@ -1,28 +1,29 @@
-use std::io::{Seek, Read};
+use std::io::{Read, Seek};
 
-use crate::error::CksError;
-use crate::decoder_core::core::DecoderCore;
 use super::FormatType;
+use crate::decoder_core::core::DecoderCore;
+use crate::error::CksError;
 
 #[derive(Clone, Debug)]
-pub enum DecoderType
-{
+pub enum DecoderType {
     Adpcm,
     Pcmi8,
     Pcmi16,
     Pcmf32,
-    Unknown
+    Unknown,
 }
 
 pub struct Decoder<R>
-where R: Read + Seek
+where
+    R: Read + Seek,
 {
     decorder_core: DecoderCore<R>,
-    decoder_type: DecoderType
+    decoder_type: DecoderType,
 }
 
-impl<R> Decoder<R> 
-where R: Read + Seek
+impl<R> Decoder<R>
+where
+    R: Read + Seek,
 {
     pub fn new(mut reader: R) -> Result<Self, CksError> {
         let _ = reader.rewind();
@@ -90,13 +91,11 @@ fn t() {
                     let _ = out_b.write(&*_buf);
                 }
             }
-            
+
             //AudioUtil::convert_i16_to_f(&mut audio_util, in_buf, out_buf);
             //println!("{:?}", v);
         }
     }
-    
-    
 }
 
 #[test]

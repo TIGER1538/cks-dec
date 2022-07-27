@@ -17,23 +17,23 @@ impl FileHeader {
         let mut file_version = 0;
 
         reader
-            .read_exact(&mut buffer_unit).unwrap();
-            //.or(Err(CksError::FileRead))?;
+            .read_exact(&mut buffer_unit)
+            .or(Err(CksError::FileRead))?;
         for c in buffer_unit {
             marker.push(c as char);
         }
 
         reader
-            .read_exact(&mut buffer_unit).unwrap();
-            //.or(Err(CksError::FileRead))?;
+            .read_exact(&mut buffer_unit)
+            .or(Err(CksError::FileRead))?;
         write_header_info(&buffer_unit, &mut targets);
         reader
-            .read_exact(&mut buffer_unit).unwrap();
-            //.or(Err(CksError::FileRead))?;
+            .read_exact(&mut buffer_unit)
+            .or(Err(CksError::FileRead))?;
         write_header_info(&buffer_unit, &mut file_type);
         reader
-            .read_exact(&mut buffer_unit).unwrap();
-            //.or(Err(CksError::FileRead))?;
+            .read_exact(&mut buffer_unit)
+            .or(Err(CksError::FileRead))?;
         write_header_info(&buffer_unit, &mut file_version);
 
         Ok(Self {
@@ -45,6 +45,7 @@ impl FileHeader {
     }
 }
 
+#[inline]
 fn write_header_info(buf_read: &[u8; 4], target: &mut u32) {
     *target = u32::from_le_bytes(*buf_read);
 }

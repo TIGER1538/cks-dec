@@ -39,7 +39,7 @@ impl SampleInfo {
             1 => DecoderType::Pcmi8,
             2 => DecoderType::Adpcm,
             3 => DecoderType::Pcmf32,
-            _ => DecoderType::Unknown
+            _ => DecoderType::Unknown,
         };
 
         Self {
@@ -72,41 +72,9 @@ impl SampleInfo {
             loop_count: 0,
         }
     }
-
-    /*
-    pub fn read(self) -> Self {
-        let mut reader = self.reader.borrow_mut();
-        let format = read_to_u8(&mut reader);
-        let channels = read_to_u8(&mut reader);
-        let sample_rate = read_to_u16(&mut reader);
-        let blocks = read_to_i32(&mut reader);
-        let block_bytes = read_to_u16(&mut reader);
-        let block_frames = read_to_u16(&mut reader);
-        let volume = read_to_u16(&mut reader);
-        let pan = read_to_i16(&mut reader);
-        let loop_start = read_to_u32(&mut reader);
-        let loop_end = read_to_u32(&mut reader);
-        let loop_count = read_to_i16(&mut reader);
-        drop(reader);
-
-        Self {
-            reader: self.reader,
-            format,
-            channels,
-            sample_rate,
-            blocks,
-            block_bytes,
-            block_frames,
-            volume,
-            pan,
-            loop_start,
-            loop_end,
-            loop_count,
-        }
-    }
-    */
 }
 
+#[inline]
 fn read_to_u8<R>(reader: &mut R) -> u8
 where
     R: Read + Seek,
@@ -116,38 +84,42 @@ where
     buf[0]
 }
 
+#[inline]
 fn read_to_u16<R>(reader: &mut R) -> u16
 where
     R: Read + Seek,
 {
     let mut buf = [0u8; 2];
     let _ = reader.read_exact(&mut buf);
-    u16::from_ne_bytes(buf)
+    u16::from_le_bytes(buf)
 }
 
+#[inline]
 fn read_to_u32<R>(reader: &mut R) -> u32
 where
     R: Read + Seek,
 {
     let mut buf = [0u8; 4];
     let _ = reader.read_exact(&mut buf);
-    u32::from_ne_bytes(buf)
+    u32::from_le_bytes(buf)
 }
 
+#[inline]
 fn read_to_i16<R>(reader: &mut R) -> i16
 where
     R: Read + Seek,
 {
     let mut buf = [0u8; 2];
     let _ = reader.read_exact(&mut buf);
-    i16::from_ne_bytes(buf)
+    i16::from_le_bytes(buf)
 }
 
+#[inline]
 fn read_to_i32<R>(reader: &mut R) -> i32
 where
     R: Read + Seek,
 {
     let mut buf = [0u8; 4];
     let _ = reader.read_exact(&mut buf);
-    i32::from_ne_bytes(buf)
+    i32::from_le_bytes(buf)
 }

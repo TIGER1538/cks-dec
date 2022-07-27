@@ -1,10 +1,10 @@
 #![allow(dead_code, unused)]
-pub mod decoder;
-pub mod sample;
-mod error;
-mod decoder_core;
-mod file_header;
 mod audio_util;
+pub mod decoder;
+mod decoder_core;
+mod error;
+mod file_header;
+pub mod sample;
 
 #[derive(PartialEq, Debug)]
 pub enum FormatType {
