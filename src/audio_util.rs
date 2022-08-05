@@ -75,7 +75,7 @@ pub mod AudioUtil {
 
     #[inline]
     pub fn convert_i8_f(in_buf: &Vec<u8>, out_buf: &mut Vec<f32>) {
-        assert_eq!(out_buf.len(), in_buf.len());
+        assert_eq!(out_buf.len() % 4, 0);
         let factor = 1.0_f32 / i8::MAX as f32;
         for (i, c) in in_buf.iter().rev().enumerate() {
             out_buf[i] = i8::from_le_bytes(*std::array::from_ref(c)) as f32 * factor;
@@ -84,7 +84,7 @@ pub mod AudioUtil {
 
     #[inline]
     pub fn convert_i8_to_i32(in_buf: &Vec<u8>, out_buf: &mut Vec<i32>) {
-        assert_eq!(out_buf.len(), in_buf.len());
+        assert_eq!(out_buf.len() % 4, 0);
         for (i, c) in in_buf.iter().rev().enumerate() {
             out_buf[i] = (i8::from_le_bytes(*std::array::from_ref(c)) as i32) << 17;
         }
