@@ -1,2 +1,4 @@
 //this feature uses SoundTouch library. this needs the int version of it.
-use ffi;
+pub mod ffi;
+#[cfg(debug_assertions)]
+mod bindings;
