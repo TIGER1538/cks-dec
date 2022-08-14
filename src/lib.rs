@@ -6,6 +6,9 @@ mod error;
 mod file_header;
 pub mod sample;
 
+#[cfg(feature="time-stretch")]
+pub mod time_stretch;
+
 #[derive(PartialEq, Debug)]
 pub enum FormatType {
     Int16(Vec<i16>),
