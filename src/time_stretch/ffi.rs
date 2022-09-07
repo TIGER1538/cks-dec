@@ -2,7 +2,7 @@ use std::os::raw::c_char;
 use std::{ffi::c_void, fmt::Write};
 
 #[cfg(debug_assertions)]
-use super::bindings::*;
+use super::bindings::{self, *};
 
 #[cfg(not(debug_assertions))]
 use soundtouch_sys as bindings;
@@ -33,7 +33,7 @@ impl SoundTouch {
         unsafe {
             let c = bindings::soundtouch_SoundTouch_getVersionString() as *const c_char;
             let c_str = std::ffi::CStr::from_ptr(c);
-            s = c_str.to_string_lossy().to_owned();
+            s = c_str.to_string_lossy().to_string();
         }
         s
     }
